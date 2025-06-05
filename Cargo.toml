@@ -1,0 +1,24 @@
+[package]
+name = "Shaper"
+version = "0.1.0"
+edition = "2024"
+author = "Sibai Isaac"
+description = "A Rust-based GUI application for editing curves and shapes."
+homepage = "https://github.com/sibaiper/shaper" # Link to your GitHub repo
+repository = "https://github.com/sibaiper/shaper" # Link to your GitHub repo
+license = "MIT OR Apache-2.0" # Common open-source licenses
+keywords = ["gui", "editor", "curve", "shape", "rust"]
+categories = ["gui", "graphics", "development-tools"]
+readme = "README.md"
+
+[dependencies]
+eframe = "0.31.1"
+kurbo = "0.11.2"
+simplify-rs = "0.1.5"
+
+# release profile for optimized builds
+[profile.release]
+opt-level = 3 # optimize for speed
+lto = true # link-time optimization
+codegen-units = 1 # more aggressive optimization, but slower compile times
+strip = "debuginfo" # strip debug information from the binary
