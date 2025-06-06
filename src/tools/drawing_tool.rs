@@ -1,4 +1,4 @@
-use eframe::egui::{self, Event, Context, Painter, Response, Stroke, Color32};
+use eframe::egui::{self, Event, Context, Painter, Response};
 use crate::{Shape, Shaper};
 
 pub struct DrawingTool;
@@ -71,33 +71,5 @@ impl super::Tool for DrawingTool {
         }
     }
 
-    fn paint(&mut self, painter: &Painter, app: &Shaper) {
-        // draw all finished shapes (outside of current in-progress stroke)
-        for shape in &app.shapes {
-            shape.draw_beziers(painter, &app);
-        }
-
-        // move this to inside the shape as a method later.. leave here for now for easier debugging and working
-        // draw in-progress raw stroke
-        // apply zoom & pan to each endpoint
-        for window in app.curr_shape.current_stroke.windows(2) {
-            let a = app.world_to_screen(window[0]);
-            let b = app.world_to_screen(window[1]);
-            painter.line_segment([a, b], Stroke::new(5.0, Color32::GRAY));
-        }
-
-        // draw original green stroke if enabled
-        if app.draw_original_stroke {
-            for shape in &app.shapes {
-                shape.draw_raw(painter, &app);
-            }
-        }
-
-        // draw handles if requested
-        if app.show_handles {
-            for shape in &app.shapes {
-                shape.draw_handles(painter, &app);
-            }
-        }
-    }
+    fn paint(&mut self, _painter: &Painter, _app: &Shaper) {}
 }

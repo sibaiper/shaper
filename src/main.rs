@@ -1,6 +1,7 @@
 mod shape;
 mod tools {
     pub mod drawing_tool;
+    pub mod editing_tool;
     pub mod panning_tool;
     pub trait Tool {
         fn handle_input(
@@ -14,10 +15,11 @@ mod tools {
 }
 use crate::shape::Shape;
 use eframe::egui::{self, Visuals};
-use egui::emath::Vec2;
+use egui::emath::{Vec2};
 use egui::{Color32, Sense};
 use tools::Tool;
 use tools::drawing_tool::DrawingTool;
+use tools::editing_tool::EditingTool;
 use tools::panning_tool::PanningTool;
 
 /// main application state
@@ -52,8 +54,24 @@ struct Shaper {
     // keep each tool in a `Box<dyn Tool>`, so they can be swapped at runtime.
     drawing_tool: Option<Box<dyn Tool>>,
     panning_tool: Option<Box<dyn Tool>>,
+    editing_tool: Option<Box<dyn Tool>>,
 
+
+    // will be probably moved to drawing tool once selection tool is
+    // implemented. currently thickness is being used to change the width
+    // of all shapes, but once selectiob tool is implemented, each shape
+    // can have its own width, and the drawing tool will have a thickness
+    // variable to dictate the new shape thickness.
     thickness: f64,
+
+
+    // settings variables
+    handle_radius: f32,
+    handle_arm_thicknes: f32,
+    overlay_beziers_thickness: f32,
+    p_color: Color32,
+    cp_color: Color32,
+
 }
 
 impl Default for Shaper {
@@ -69,7 +87,13 @@ impl Default for Shaper {
             selected_tool: ToolKind::Drawing,
             drawing_tool: Some(Box::new(DrawingTool::new())),
             panning_tool: Some(Box::new(PanningTool::new())),
+            editing_tool: Some(Box::new(EditingTool::new())),
             thickness: 10.0,
+            handle_radius: 5.0,
+            handle_arm_thicknes: 2.5,
+            overlay_beziers_thickness: 1.5,
+            p_color: Color32::from_rgb(0, 150, 230),
+            cp_color: Color32::GOLD,
         }
     }
 }
@@ -126,7 +150,7 @@ impl eframe::App for Shaper {
             match current_tool {
                 ToolKind::Drawing => {
                     // 1) take() the DrawingTool out of the Option<Box<dyn Tool>>
-                    let mut tool: Box<dyn Tool + 'static>  = self
+                    let mut tool: Box<dyn Tool + 'static> = self
                         .drawing_tool
                         .take()
                         .expect("drawing_tool was None when it shouldn`t be");
@@ -146,6 +170,17 @@ impl eframe::App for Shaper {
                     tool.handle_input(ctx, &response, self);
 
                     self.panning_tool = Some(tool);
+                }
+
+                ToolKind::Editing => {
+                    let mut tool = self
+                        .editing_tool
+                        .take()
+                        .expect("editing_tool was None when it shouldn`t be");
+
+                    tool.handle_input(ctx, &response, self);
+
+                    self.editing_tool = Some(tool);
                 }
             }
 
@@ -169,6 +204,7 @@ impl eframe::App for Shaper {
             if self.show_handles {
                 for shape in &self.shapes {
                     shape.draw_handles(&painter, self);
+                    shape.draw_overlay_beziers(&painter, self);
                 }
             }
 
@@ -190,6 +226,15 @@ impl eframe::App for Shaper {
                     tool.paint(&painter, self);
                     self.panning_tool = Some(tool);
                 }
+
+                ToolKind::Editing => {
+                    let mut tool = self
+                        .editing_tool
+                        .take()
+                        .expect("editing_tool was None when it shouldn`t be");
+                    tool.paint(&painter, self);
+                    self.editing_tool = Some(tool);
+                }
             }
 
             // draw the settings & tool‐selector windows (always at fixed screen coords)
@@ -208,8 +253,8 @@ impl eframe::App for Shaper {
                     }
 
                     // slider for thickness of curves
-                    let width = egui::Slider::new(&mut self.thickness, 1.0..=100.0)
-                        .text("Thickness");
+                    let width =
+                        egui::Slider::new(&mut self.thickness, 1.0..=100.0).text("Thickness");
                     if ui.add(width).changed() {
                         // if tolerance changed, refit all existing shapes:
                         for shape in &mut self.shapes {
@@ -221,11 +266,14 @@ impl eframe::App for Shaper {
             egui::Window::new("Tools")
                 .anchor(egui::Align2::LEFT_TOP, egui::Vec2::new(10.0, 10.0))
                 .show(ctx, |ui| {
-                    if ui.button("Drawing").clicked() {
+                    if ui.button("Draw").clicked() {
                         self.selected_tool = ToolKind::Drawing;
                     }
-                    if ui.button("Pan/Zoom").clicked() {
+                    if ui.button("Pan-Zoom").clicked() {
                         self.selected_tool = ToolKind::Panning;
+                    }
+                    if ui.button("Edit").clicked() {
+                        self.selected_tool = ToolKind::Editing;
                     }
                 });
         });
@@ -236,6 +284,7 @@ impl eframe::App for Shaper {
 pub enum ToolKind {
     Drawing,
     Panning,
+    Editing,
     // for later:
     //Selection
 }

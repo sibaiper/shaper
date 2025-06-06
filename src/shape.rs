@@ -1,8 +1,6 @@
-use eframe::{
-    egui::{
-        Color32, Painter, Pos2,Stroke,
-        epaint::{CubicBezierShape, PathShape},
-    },
+use eframe::egui::{
+    Color32, Painter, Pos2, Stroke,
+    epaint::{CubicBezierShape, PathShape},
 };
 use kurbo::{CubicBez, Point as KPoint, Vec2};
 use simplify_rs::{Point as SrPoint, simplify};
@@ -105,16 +103,16 @@ impl Shape {
         // we'll accumulate _all_ screen‐space points here:
         let mut all_points: Vec<Pos2> = Vec::new();
 
-        // 2) loop each fitted CubicBez segment:
+        // 1) loop each fitted CubicBez segment:
         for (seg_idx, bzr) in self.beziers.iter().enumerate() {
-            // 2a) convert the four Kurbo control points into screen‐space Pos2:
+            // 1a) convert the four Kurbo control points into screen‐space Pos2:
             let (w0, w1, w2, w3) = (bzr.p0, bzr.p1, bzr.p2, bzr.p3);
             let s0 = app.world_to_screen(Pos2::new(w0.x as f32, w0.y as f32));
             let s1 = app.world_to_screen(Pos2::new(w1.x as f32, w1.y as f32));
             let s2 = app.world_to_screen(Pos2::new(w2.x as f32, w2.y as f32));
             let s3 = app.world_to_screen(Pos2::new(w3.x as f32, w3.y as f32));
 
-            // 2b) build a temporary CubicBezierShape:
+            // 1b) build a temporary CubicBezierShape:
             let bez_shape = CubicBezierShape {
                 points: [s0, s1, s2, s3],
                 closed: false,
@@ -122,14 +120,14 @@ impl Shape {
                 fill: Color32::TRANSPARENT,
             };
 
-            // 2c) flatten this one cubic into straight‐line PathShapes:
+            // 1c) flatten this one cubic into straight‐line PathShapes:
             //     - tol: Some(0.5) means “max error ~0.5px” (tweak for more/less fidelity)
             //     - eps:  None   means “use the default epsilon internally”
             let tol: Option<f32> = Some(0.5);
             let eps: Option<f32> = None;
             let mut sub_paths: Vec<PathShape> = bez_shape.to_path_shapes(tol, eps);
 
-            // 2d) each `PathShape` contains a `Vec<Pos2>` in `.points`.
+            // 1d) each `PathShape` contains a `Vec<Pos2>` in `.points`.
             //     if there are multiple PathShapes (rare—only when the curve intersects itself),
             //     we stitch them all together in order. But we must avoid duplicating the joint
             //     point between segment N and segment N+1. So:
@@ -146,12 +144,11 @@ impl Shape {
             }
         }
 
-        // 3) now `all_points` is one continuous polyline in screen space. Stroke it once:
+        // now `all_points` is one continuous polyline in screen space. Stroke it once:
         let stroke_width = (self.thickness * app.zoom as f64) as f32;
         let stroke = Stroke::new(stroke_width, Color32::BLACK);
         painter.line(all_points, stroke);
     }
-
 
     /// draw the *raw* strokes in thin green
     pub fn draw_raw(&self, painter: &Painter, app: &crate::Shaper) {
@@ -166,9 +163,9 @@ impl Shape {
 
     /// draw control‐point handles (filled circles & red connecting lines)
     pub fn draw_handles(&self, painter: &Painter, app: &crate::Shaper) {
-        let handle_radius = 3.0 * app.zoom;
-        let p_color = Color32::from_rgb(0, 150, 230);
-        let cp_color = Color32::GOLD;
+        let handle_radius = app.handle_radius * app.zoom;
+        let p_color = app.p_color;
+        let cp_color = app.cp_color;
         for bez in &self.beziers {
             let k0 = bez.p0;
             let k1 = bez.p1;
@@ -179,20 +176,77 @@ impl Shape {
             let p2 = app.world_to_screen(Pos2::new(k2.x as f32, k2.y as f32));
             let p3 = app.world_to_screen(Pos2::new(k3.x as f32, k3.y as f32));
 
-            painter.line_segment([p0, p1], Stroke::new(2.5 * app.zoom, Color32::RED));
-            painter.line_segment([p1, p2], Stroke::new(2.5 * app.zoom, Color32::RED));
-            painter.line_segment([p3, p2], Stroke::new(2.5 * app.zoom, Color32::RED));
+            painter.line_segment(
+                [p0, p1],
+                Stroke::new(app.handle_arm_thicknes * app.zoom, Color32::RED),
+            );
+            // painter.line_segment([p1, p2], Stroke::new(app.handle_arm_thicknes * app.zoom, Color32::RED)); // line connecting the 2 control points to one another (off for now)
+            painter.line_segment(
+                [p3, p2],
+                Stroke::new(app.handle_arm_thicknes * app.zoom, Color32::RED),
+            );
             painter.circle_filled(p0, handle_radius, p_color);
             painter.circle_filled(p1, handle_radius, cp_color);
             painter.circle_filled(p2, handle_radius, cp_color);
             painter.circle_filled(p3, handle_radius, p_color);
         }
     }
+
+    pub fn draw_overlay_beziers(&self, painter: &Painter, app: &crate::Shaper) {
+        // we'll accumulate _all_ screen‐space points here:
+        let mut all_points: Vec<Pos2> = Vec::new();
+
+        // 1) loop each fitted CubicBez segment:
+        for (seg_idx, bzr) in self.beziers.iter().enumerate() {
+            // 1a) convert the four Kurbo control points into screen‐space Pos2:
+            let (w0, w1, w2, w3) = (bzr.p0, bzr.p1, bzr.p2, bzr.p3);
+            let s0 = app.world_to_screen(Pos2::new(w0.x as f32, w0.y as f32));
+            let s1 = app.world_to_screen(Pos2::new(w1.x as f32, w1.y as f32));
+            let s2 = app.world_to_screen(Pos2::new(w2.x as f32, w2.y as f32));
+            let s3 = app.world_to_screen(Pos2::new(w3.x as f32, w3.y as f32));
+
+            // 1b) build a temporary CubicBezierShape:
+            let bez_shape = CubicBezierShape {
+                points: [s0, s1, s2, s3],
+                closed: false,
+                stroke: Default::default(),
+                fill: Color32::TRANSPARENT,
+            };
+
+            // 1c) flatten this one cubic into straight‐line PathShapes:
+            //     - tol: Some(0.5) means “max error ~0.5px” (tweak for more/less fidelity)
+            //     - eps:  None   means “use the default epsilon internally”
+            let tol: Option<f32> = Some(0.5);
+            let eps: Option<f32> = None;
+            let mut sub_paths: Vec<PathShape> = bez_shape.to_path_shapes(tol, eps);
+
+            // 1d) each `PathShape` contains a `Vec<Pos2>` in `.points`.
+            //     if there are multiple PathShapes (rare—only when the curve intersects itself),
+            //     we stitch them all together in order. But we must avoid duplicating the joint
+            //     point between segment N and segment N+1. So:
+            for path_shape in sub_paths.drain(..) {
+                if seg_idx > 0 {
+                    // for every segment after the first, drop the very first point to avoid duplication:
+                    if let Some((_, tail)) = path_shape.points.split_first() {
+                        all_points.extend_from_slice(tail);
+                    }
+                } else {
+                    // for the first segment, take all points:
+                    all_points.extend(path_shape.points.iter());
+                }
+            }
+        }
+
+        // now `all_points` is one continuous polyline in screen space. Stroke it once:
+        let stroke_width = app.overlay_beziers_thickness * app.zoom;
+        let stroke = Stroke::new(stroke_width, Color32::WHITE);
+        painter.line(all_points, stroke);
+    }
 }
 
-// keeping this for maybe later use if needed. previous implementations of the 
+// keeping this for maybe later use if needed. previous implementations of the
 // rendering algorithm used this function to make up a quad of 2 triangles.
-// but that egui rasterises triangles drawn onto the painter, so the final 
+// but that egui rasterises triangles drawn onto the painter, so the final
 // shape was not smooth at all. Opted for the built in egui cubic bezier render method
 #[allow(dead_code)]
 fn bezier_tangent(bzr: CubicBez, t: f64) -> Vec2 {
