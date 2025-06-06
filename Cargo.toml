@@ -2,7 +2,7 @@
 name = "Shaper"
 version = "0.1.0"
 edition = "2024"
-author = "Sibai Isaac"
+authors = ["Sibai Isaac"]
 description = "A Rust-based GUI application for editing curves and shapes."
 homepage = "https://github.com/sibaiper/shaper" # Link to your GitHub repo
 repository = "https://github.com/sibaiper/shaper" # Link to your GitHub repo

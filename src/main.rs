@@ -203,8 +203,9 @@ impl eframe::App for Shaper {
             // optionally draw handles in panning/drawing interactive mode:
             if self.show_handles {
                 for shape in &self.shapes {
-                    shape.draw_handles(&painter, self);
+                    // draw the overlay beziers first
                     shape.draw_overlay_beziers(&painter, self);
+                    shape.draw_handles(&painter, self);
                 }
             }
 
