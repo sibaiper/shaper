@@ -1,3 +1,4 @@
+use crate::tool::Tool;
 use crate::Shaper;
 use eframe::egui::{Context, Painter, Pos2, Response, Vec2};
 use kurbo::{Nearest, ParamCurveNearest, Point};
@@ -60,7 +61,7 @@ impl EditingTool {
     }
 }
 
-impl super::Tool for EditingTool {
+impl Tool for EditingTool {
     fn handle_input(&mut self, ctx: &Context, response: &Response, app: &mut Shaper) {
         if let Some(pointer_pos) = response.hover_pos() {
             let scroll_delta = ctx.input(|i| i.smooth_scroll_delta.y);
@@ -252,4 +253,8 @@ impl super::Tool for EditingTool {
     }
 
     fn paint(&mut self, _painter: &Painter, _app: &Shaper) {}
+
+    fn tool_ui(&mut self, ctx: &Context, app: &crate::Shaper) {
+        // do nothing for
+    }
 }

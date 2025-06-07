@@ -1,3 +1,4 @@
+use crate::tool::Tool;
 use crate::Shaper;
 use eframe::egui::{Context, Painter, Pos2, Response, Vec2};
 
@@ -16,7 +17,7 @@ impl PanningTool {
     }
 }
 
-impl super::Tool for PanningTool {
+impl Tool for PanningTool {
     fn handle_input(&mut self, ctx: &Context, response: &Response, app: &mut Shaper) {
         // handle zooming with scroll wheel
         if let Some(pointer_pos) = response.hover_pos() {
@@ -76,5 +77,9 @@ impl super::Tool for PanningTool {
         //     Stroke::new(5.0, Color32::LIGHT_BLUE),
         //     StrokeKind::Middle,
         // );
+    }
+
+    fn tool_ui(&mut self, ctx: &Context, app: &crate::Shaper) {
+        // do nothing for
     }
 }

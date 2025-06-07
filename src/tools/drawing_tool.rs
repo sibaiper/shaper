@@ -1,5 +1,6 @@
 use eframe::egui::{self, Event, Context, Painter, Response};
 use crate::{Shape, Shaper};
+use crate::tool::Tool;
 
 pub struct DrawingTool;
 
@@ -9,7 +10,7 @@ impl DrawingTool {
     }
 }
 
-impl super::Tool for DrawingTool {
+impl Tool for DrawingTool {
     fn handle_input(
         &mut self,
         ctx: &Context,
@@ -72,4 +73,10 @@ impl super::Tool for DrawingTool {
     }
 
     fn paint(&mut self, _painter: &Painter, _app: &Shaper) {}
+
+    
+    fn tool_ui(&mut self, ctx: &Context, app: &Shaper) {
+        // Default: do nothing
+    }
+
 }

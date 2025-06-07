@@ -1,26 +1,27 @@
 mod shape;
+mod tool;
 mod tools {
     pub mod drawing_tool;
     pub mod editing_tool;
     pub mod panning_tool;
-    pub trait Tool {
-        fn handle_input(
-            &mut self,
-            ctx: &eframe::egui::Context,
-            response: &eframe::egui::Response,
-            app: &mut super::Shaper,
-        );
-        fn paint(&mut self, painter: &eframe::egui::Painter, app: &super::Shaper);
-    }
 }
 use crate::shape::Shape;
-use eframe::egui::{self, Visuals};
-use egui::emath::{Vec2};
+use crate::tool::Tool;
+use eframe::egui::{self, Context, Visuals};
+use egui::emath::Vec2;
 use egui::{Color32, Sense};
-use tools::Tool;
 use tools::drawing_tool::DrawingTool;
 use tools::editing_tool::EditingTool;
 use tools::panning_tool::PanningTool;
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum ToolKind {
+    Drawing,
+    Panning,
+    Editing,
+    // for later:
+    //Selection
+}
 
 /// main application state
 struct Shaper {
@@ -56,7 +57,6 @@ struct Shaper {
     panning_tool: Option<Box<dyn Tool>>,
     editing_tool: Option<Box<dyn Tool>>,
 
-
     // will be probably moved to drawing tool once selection tool is
     // implemented. currently thickness is being used to change the width
     // of all shapes, but once selectiob tool is implemented, each shape
@@ -64,9 +64,9 @@ struct Shaper {
     // variable to dictate the new shape thickness.
     thickness: f64,
 
-    // variable to track the index  
+    // variable to track the index
     // of the selected point/s
-    // should maybe be moved to 
+    // should maybe be moved to
     // the editing-tool
     selected_p: i32,
 
@@ -79,7 +79,6 @@ struct Shaper {
     p_border_color: Color32,
     selected_p_color: Color32,
     handle_arm_color: Color32,
-
 }
 
 impl Default for Shaper {
@@ -100,7 +99,6 @@ impl Default for Shaper {
 
             selected_p: -1, //
 
-            
             // sizes
             handle_radius: 4.0,
             handle_arm_thicknes: 1.5,
@@ -111,7 +109,6 @@ impl Default for Shaper {
             p_border_color: Color32::from_rgb(10, 118, 241),
             selected_p_color: Color32::from_rgb(10, 118, 241),
             handle_arm_color: Color32::from_rgb(10, 118, 241),
-            
         }
     }
 }
@@ -257,53 +254,87 @@ impl eframe::App for Shaper {
             }
 
             // draw the settings & tool‐selector windows (always at fixed screen coords)
-            egui::Window::new("Settings")
-                .anchor(egui::Align2::RIGHT_TOP, egui::Vec2::new(-10.0, 10.0))
-                .show(ctx, |ui| {
-                    ui.checkbox(&mut self.show_handles, "Show handles");
-                    ui.checkbox(&mut self.draw_original_stroke, "Draw original stroke");
-                    let tol = egui::Slider::new(&mut self.bezier_tolerance, 1.0..=100.0)
-                        .text("Tolerance");
-                    if ui.add(tol).changed() {
-                        // if tolerance changed, refit all existing shapes:
-                        for shape in &mut self.shapes {
-                            shape.refit_all_strokes(self.bezier_tolerance);
-                        }
-                    }
 
-                    // slider for thickness of curves
-                    let width =
-                        egui::Slider::new(&mut self.thickness, 1.0..=100.0).text("Thickness");
-                    if ui.add(width).changed() {
-                        // if tolerance changed, refit all existing shapes:
-                        for shape in &mut self.shapes {
-                            shape.thickness = self.thickness;
-                        }
-                    }
-                });
-
-            egui::Window::new("Tools")
-                .anchor(egui::Align2::LEFT_TOP, egui::Vec2::new(10.0, 10.0))
-                .show(ctx, |ui| {
-                    if ui.button("Draw").clicked() {
-                        self.selected_tool = ToolKind::Drawing;
-                    }
-                    if ui.button("Pan-Zoom").clicked() {
-                        self.selected_tool = ToolKind::Panning;
-                    }
-                    if ui.button("Edit").clicked() {
-                        self.selected_tool = ToolKind::Editing;
-                    }
-                });
+            self.show_settings_window(ctx);
+            self.show_tools_window(ctx);
+            self.show_tool_specific_ui(ctx);
         });
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq)]
-pub enum ToolKind {
-    Drawing,
-    Panning,
-    Editing,
-    // for later:
-    //Selection
+impl Shaper {
+    // settings window
+    fn show_settings_window(&mut self, ctx: &Context) {
+        egui::Window::new("Settings")
+            .anchor(egui::Align2::RIGHT_TOP, egui::Vec2::new(-10.0, 10.0))
+            .show(ctx, |ui| {
+                ui.checkbox(&mut self.show_handles, "Show handles");
+                ui.checkbox(&mut self.draw_original_stroke, "Draw original stroke");
+                let tol =
+                    egui::Slider::new(&mut self.bezier_tolerance, 1.0..=100.0).text("Tolerance");
+                if ui.add(tol).changed() {
+                    // if tolerance changed, refit all existing shapes:
+                    for shape in &mut self.shapes {
+                        shape.refit_all_strokes(self.bezier_tolerance);
+                    }
+                }
+
+                // slider for thickness of curves
+                let width = egui::Slider::new(&mut self.thickness, 1.0..=100.0).text("Thickness");
+                if ui.add(width).changed() {
+                    // if tolerance changed, refit all existing shapes:
+                    for shape in &mut self.shapes {
+                        shape.thickness = self.thickness;
+                    }
+                }
+            });
+    }
+
+    // tools window
+    fn show_tools_window(&mut self, ctx: &Context) {
+        egui::Window::new("Tools")
+            .anchor(egui::Align2::LEFT_TOP, egui::Vec2::new(10.0, 10.0))
+            .show(ctx, |ui| {
+                if ui.button("Draw").clicked() {
+                    self.selected_tool = ToolKind::Drawing;
+                }
+                if ui.button("Pan-Zoom").clicked() {
+                    self.selected_tool = ToolKind::Panning;
+                }
+                if ui.button("Edit").clicked() {
+                    self.selected_tool = ToolKind::Editing;
+                }
+            });
+    }
+
+    /// Displays the UI for the currently selected tool.
+    ///
+    /// This method handles a common Rust borrowing pattern: to avoid
+    /// "multiple mutable borrows" when a tool's `tool_ui` method needs
+    /// mutable access to both the tool itself and the `Shaper` instance.
+    ///
+    /// It achieves this by temporarily taking the active tool out of its `Option`,
+    /// allowing it to be mutably borrowed and used, and then placing it back.
+    ///
+    /// Panics if the selected tool is unexpectedly `None`.
+    fn show_tool_specific_ui(&mut self, ctx: &egui::Context) {
+        let current_tool = self.selected_tool;
+        match current_tool {
+            ToolKind::Drawing => {
+                let mut tool = self.drawing_tool.take().expect("drawing_tool was None");
+                tool.tool_ui(ctx, self);
+                self.drawing_tool = Some(tool);
+            }
+            ToolKind::Panning => {
+                let mut tool = self.panning_tool.take().expect("panning_tool was None");
+                tool.tool_ui(ctx, self);
+                self.panning_tool = Some(tool);
+            }
+            ToolKind::Editing => {
+                let mut tool = self.editing_tool.take().expect("editing_tool was None");
+                tool.tool_ui(ctx, self);
+                self.editing_tool = Some(tool);
+            }
+        }
+    }
 }

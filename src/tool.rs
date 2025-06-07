@@ -3,6 +3,7 @@ use eframe::egui::{Context, Response, Painter};
 
 /// Each tool must be able to:
 /// - handle input events
+/// - draw tool specific UI elements
 /// - draw itself onto the `painter`
 /// - optionally modify the app state (e.g. current shape, shape list, camera transform, etc.)
 
@@ -18,4 +19,8 @@ pub trait Tool {
     /// called after input, to let the tool draw any custom UI or decorations.
     /// draw in-progress strokes, pan hints, etc.
     fn paint(&mut self, painter: &Painter, app: &crate::Shaper);
+
+    
+    // draw specific UI elements
+    fn tool_ui(&mut self, ctx: &Context, app: &crate::Shaper);
 }
