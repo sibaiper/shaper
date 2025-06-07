@@ -64,6 +64,11 @@ struct Shaper {
     // variable to dictate the new shape thickness.
     thickness: f64,
 
+    // variable to track the index  
+    // of the selected point/s
+    // should maybe be moved to 
+    // the editing-tool
+    selected_p: i32,
 
     // settings variables
     handle_radius: f32,
@@ -71,6 +76,9 @@ struct Shaper {
     overlay_beziers_thickness: f32,
     p_color: Color32,
     cp_color: Color32,
+    p_border_color: Color32,
+    selected_p_color: Color32,
+    handle_arm_color: Color32,
 
 }
 
@@ -89,11 +97,21 @@ impl Default for Shaper {
             panning_tool: Some(Box::new(PanningTool::new())),
             editing_tool: Some(Box::new(EditingTool::new())),
             thickness: 10.0,
-            handle_radius: 5.0,
-            handle_arm_thicknes: 2.5,
-            overlay_beziers_thickness: 1.5,
-            p_color: Color32::from_rgb(0, 150, 230),
-            cp_color: Color32::GOLD,
+
+            selected_p: -1, //
+
+            
+            // sizes
+            handle_radius: 4.0,
+            handle_arm_thicknes: 1.5,
+            overlay_beziers_thickness: 1.0,
+            // colors
+            p_color: Color32::WHITE,
+            cp_color: Color32::WHITE,
+            p_border_color: Color32::from_rgb(10, 118, 241),
+            selected_p_color: Color32::from_rgb(10, 118, 241),
+            handle_arm_color: Color32::from_rgb(10, 118, 241),
+            
         }
     }
 }

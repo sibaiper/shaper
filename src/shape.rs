@@ -1,6 +1,5 @@
 use eframe::egui::{
-    Color32, Painter, Pos2, Stroke,
-    epaint::{CubicBezierShape, PathShape},
+    epaint::{CubicBezierShape, PathShape}, Color32, Painter, Pos2, Stroke, Rect
 };
 use kurbo::{CubicBez, Point as KPoint, Vec2};
 use simplify_rs::{Point as SrPoint, simplify};
@@ -163,9 +162,11 @@ impl Shape {
 
     /// draw control‐point handles (filled circles & red connecting lines)
     pub fn draw_handles(&self, painter: &Painter, app: &crate::Shaper) {
+        let handle_border_radius = (app.handle_radius + 1.0) * app.zoom;
         let handle_radius = app.handle_radius * app.zoom;
         let p_color = app.p_color;
         let cp_color = app.cp_color;
+        let p_border_color = app.p_border_color;
         for bez in &self.beziers {
             let k0 = bez.p0;
             let k1 = bez.p1;
@@ -178,17 +179,63 @@ impl Shape {
 
             painter.line_segment(
                 [p0, p1],
-                Stroke::new(app.handle_arm_thicknes * app.zoom, Color32::RED),
+                Stroke::new(app.handle_arm_thicknes * app.zoom, app.handle_arm_color),
             );
-            // painter.line_segment([p1, p2], Stroke::new(app.handle_arm_thicknes * app.zoom, Color32::RED)); // line connecting the 2 control points to one another (off for now)
+            // painter.line_segment([p1, p2], Stroke::new(app.handle_arm_thicknes * app.zoom, app.handle_arm_color)); // line connecting the 2 control points to one another (off for now)
             painter.line_segment(
                 [p3, p2],
-                Stroke::new(app.handle_arm_thicknes * app.zoom, Color32::RED),
+                Stroke::new(app.handle_arm_thicknes * app.zoom, app.handle_arm_color),
             );
-            painter.circle_filled(p0, handle_radius, p_color);
+            
+            // simple one color filled circle for all points
+            // painter.circle_filled(p0, handle_radius, p_color);
+            // painter.circle_filled(p1, handle_radius, cp_color);
+            // painter.circle_filled(p2, handle_radius, cp_color);
+            // painter.circle_filled(p3, handle_radius, p_color);
+
+            //alternatively:
+            // the control points as circles
+            // and the points themselves as squares
+            
+            // first draw a rect slightly bigger (1 pixel) 
+            // bigger than the actual rect
+            let p0_rect = Rect {
+                min: Pos2 { x: p0.x - handle_border_radius, y: p0.y - handle_border_radius },
+                max: Pos2 { x: p0.x + handle_border_radius, y: p0.y + handle_border_radius },
+            };
+            painter.rect_filled(p0_rect, 0.0, p_border_color);
+
+            let p3_rect = Rect {
+                min: Pos2 { x: p3.x - handle_border_radius, y: p3.y - handle_border_radius },
+                max: Pos2 { x: p3.x + handle_border_radius, y: p3.y + handle_border_radius },
+            };
+            painter.rect_filled(p3_rect, 0.0, p_border_color);
+            
+
+
+
+            let p0_rect = Rect {
+                min: Pos2 { x: p0.x - handle_radius, y: p0.y - handle_radius },
+                max: Pos2 { x: p0.x + handle_radius, y: p0.y + handle_radius },
+            };
+            painter.rect_filled(p0_rect, 0.0, p_color);
+
+            let p3_rect = Rect {
+                min: Pos2 { x: p3.x - handle_radius, y: p3.y - handle_radius },
+                max: Pos2 { x: p3.x + handle_radius, y: p3.y + handle_radius },
+            };
+            painter.rect_filled(p3_rect, 0.0, p_color);
+
+
+            // control points:
+            // same for the control points
+            // first draw the border 1 pixel 
+            // bigger and then the points
+            painter.circle_filled(p1, handle_border_radius, p_border_color);
+            painter.circle_filled(p2, handle_border_radius, p_border_color);
+
             painter.circle_filled(p1, handle_radius, cp_color);
             painter.circle_filled(p2, handle_radius, cp_color);
-            painter.circle_filled(p3, handle_radius, p_color);
         }
     }
 
