@@ -165,9 +165,9 @@ impl Tool for EditingTool {
                 // but curr_pos needs converting of course
                 curr_pos = app.screen_to_world(curr_pos);
 
-                let delta_screen = curr_pos - start_pos;
-                let dx = delta_screen.x as f64;
-                let dy = delta_screen.y as f64;
+                let delta_screen: Vec2 = curr_pos - start_pos;
+                let dx: f64 = delta_screen.x as f64;
+                let dy: f64 = delta_screen.y as f64;
                 let delta = Point::new(dx, dy);
 
                 match &self.active_drag {
@@ -177,20 +177,36 @@ impl Tool for EditingTool {
                         ctrl_idx,
                         orig_pos,
                     } => {
-                        let shape = &mut app.shapes[*shape_idx];
+                        let shape: &mut crate::shape::Shape = &mut app.shapes[*shape_idx];
                         // mutable reference to the segment we clicked
-                        let bez = &mut shape.beziers[*bez_idx];
-                        let new_pt = Point::new(orig_pos.x + delta.x, orig_pos.y + delta.y);
+                        let bez: &mut kurbo::CubicBez = &mut shape.beziers[*bez_idx];
+                        let new_pt: Point = Point::new(orig_pos.x + delta.x, orig_pos.y + delta.y);
 
                         // move the chosen control handle
+                        /*
+                        (enhanced) dragging behavior:
+                        - when dragging an endpoint (p0 or p3), the connected control handles 
+                        - (p1 or p2 of the same segment, and p2 or p1 of the neighboring segment
+                        -  if present) are also moved by the same delta. this preserves the 
+                        - relative positions of the handles and ensures smooth curve editing.
+                        - 
+                        - when dragging a control handle (p1 or p2), only that handle is moved.
+                        - 
+                        - this behavior mimics professional vector editors, making it easier 
+                        - to maintain smooth transitions between connected Bézier segments.
+                        */
                         match ctrl_idx {
                             0 => {
                                 // move this start‐point
+                                let delta_vec: Point = Point::new(new_pt.x - bez.p0.x, new_pt.y - bez.p0.y);
                                 bez.p0 = new_pt;
-                                // also update the previous segment’s p3, if it exists
+                                // also move the first control handle by the same delta
+                                bez.p1 = Point::new(bez.p1.x + delta_vec.x, bez.p1.y + delta_vec.y);
+                                // also update the previous segment’s p3 and p2, if they exist
                                 if *bez_idx > 0 {
-                                    let prev = &mut shape.beziers[*bez_idx - 1];
+                                    let prev: &mut kurbo::CubicBez = &mut shape.beziers[*bez_idx - 1];
                                     prev.p3 = new_pt;
+                                    prev.p2 = Point::new(prev.p2.x + delta_vec.x, prev.p2.y + delta_vec.y);
                                 }
                             }
                             1 => {
@@ -203,11 +219,15 @@ impl Tool for EditingTool {
                             }
                             3 => {
                                 // move this end‐point
+                                let delta_vec: Point = Point::new(new_pt.x - bez.p3.x, new_pt.y - bez.p3.y);
                                 bez.p3 = new_pt;
-                                // also update the next segment’s p0, if it exists
+                                // also move the second control handle by the same delta
+                                bez.p2 = Point::new(bez.p2.x + delta_vec.x, bez.p2.y + delta_vec.y);
+                                // also update the next segment’s p0 and p1, if they exist
                                 if *bez_idx + 1 < shape.beziers.len() {
-                                    let next = &mut shape.beziers[*bez_idx + 1];
+                                    let next: &mut kurbo::CubicBez = &mut shape.beziers[*bez_idx + 1];
                                     next.p0 = new_pt;
+                                    next.p1 = Point::new(next.p1.x + delta_vec.x, next.p1.y + delta_vec.y);
                                 }
                             }
                             _ => unreachable!(),
