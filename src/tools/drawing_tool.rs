@@ -2,7 +2,7 @@ use crate::tool::Tool;
 use crate::{Shape, Shaper};
 use eframe::egui::color_picker::Alpha;
 use eframe::egui::{
-    self, Align, Color32, Context, Event, Layout, Painter, Response, SliderOrientation
+    self, Align, Color32, Context, Event, Layout, Painter, Response, SliderOrientation, Rect, Pos2
 };
 use egui::emath::Vec2;
 
@@ -119,11 +119,21 @@ impl Tool for DrawingTool {
     fn paint(&mut self, ctx: &Context, painter: &Painter, app: &Shaper) {
         // draw a small circle to indicate the cursor position (pen size)
         if let Some(mouse_pos) = ctx.input(|i| i.pointer.hover_pos()) {
-            painter.circle_filled(
-                mouse_pos,
-                (self.thickness * app.zoom) / 2.0,
-                self.drawing_color,
-            );
+            
+            // circle indicator
+            // painter.circle_filled(
+            //     mouse_pos,
+            //     (self.thickness * app.zoom) / 2.0,
+            //     self.drawing_color,
+            // );
+
+            // rect indicator
+            let brush_rect = Rect {
+                min: Pos2 { x: mouse_pos.x - (self.thickness / 2.0) * app.zoom, y: mouse_pos.y - (self.thickness / 2.0) * app.zoom },
+                max: Pos2 { x: mouse_pos.x + (self.thickness / 2.0) * app.zoom, y: mouse_pos.y + (self.thickness / 2.0) * app.zoom },
+            };
+            painter.rect_filled(brush_rect, 0.0, self.drawing_color);            
+            
         }
     }
 
