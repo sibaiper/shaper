@@ -21,7 +21,7 @@ _or if you only want to run it_
 1. ~~Add "edit-shape" tool to allow to allow the user to edit the created shapes~~. [DONE]
 2. Create proper UI to make the user able to create a Canvas with a fixed height and width (instead of the currently inifinite canvas). 
 3. Export functionality including SVG and  image formats like PNG, JPEG.
-
+4. Add a "Pen Tool" to create splines/shapes using the Pen tool as opposed to drawing them with the free hand.
 
 
 

@@ -265,7 +265,7 @@ impl Tool for EditingTool {
         }
     }
 
-    fn paint(&mut self, _painter: &Painter, _app: &Shaper) {}
+    fn paint(&mut self,  _ctx: &Context, _painter: &Painter, _app: &Shaper) {}
 
     fn tool_ui(&mut self, ctx: &Context, _app: &mut Shaper) {
         egui::TopBottomPanel::top("edit settings")

@@ -78,7 +78,7 @@ impl Tool for PanningTool {
         }
     }
 
-    fn paint(&mut self, _painter: &Painter, _app: &Shaper) {
+    fn paint(&mut self, _ctx: &Context, _painter: &Painter, _app: &Shaper) {
         // draw an overlay indicating the pan mode is active.
         // example: draw a semi‐transparent rectangle or cursor hint.
         // let rect = painter.clip_rect();

@@ -1,11 +1,17 @@
 use crate::tool::Tool;
 use crate::{Shape, Shaper};
-use eframe::egui::{self, Align, Context, Event, Layout, Painter, Response, SliderOrientation};
+use eframe::egui::{self, Align, Color32, Context, Event, Layout, Painter, Response, SliderOrientation};
 use egui::emath::Vec2;
 
 pub struct DrawingTool {
     bezier_tolerance: f64,
     thickness: f32,
+
+    /// Minimum pixel distance before we sample a new raw point
+    sample_tol: f32,
+
+
+    drawing_color: Color32,
 }
 
 impl DrawingTool {
@@ -13,6 +19,8 @@ impl DrawingTool {
         DrawingTool {
             bezier_tolerance: 10.0,
             thickness: 10.0,
+            sample_tol: 2.0,
+            drawing_color: Color32::BLACK,
         }
     }
 }
@@ -41,7 +49,7 @@ impl Tool for DrawingTool {
                     new_world_pos.y - old_world_pos.y,
                 );
                 app.pan_offset += world_delta * app.zoom;
-                
+
                 // percentage calculation:
                 app.calc_zoom_level();
             }
@@ -61,7 +69,7 @@ impl Tool for DrawingTool {
             if let Some(pos) = response.interact_pointer_pos() {
                 let world_pos = app.screen_to_world(pos);
                 let should_add = match app.curr_shape.current_stroke.last() {
-                    Some(&last) => last.distance(world_pos) > app.curr_shape.sample_tol,
+                    Some(&last) => last.distance(world_pos) > (self.sample_tol / app.zoom), // make sample_tol take into account the zoom level
                     None => true,
                 };
                 if should_add {
@@ -84,7 +92,7 @@ impl Tool for DrawingTool {
 
                 // push shape and reset
                 app.shapes.push(app.curr_shape.clone());
-                app.curr_shape = Shape::new(self.thickness);
+                app.curr_shape = Shape::new(self.thickness, self.drawing_color);
             }
         }
 
@@ -106,7 +114,12 @@ impl Tool for DrawingTool {
         }
     }
 
-    fn paint(&mut self, _painter: &Painter, _app: &Shaper) {}
+    fn paint(&mut self, ctx: &Context, painter: &Painter, app: &Shaper) {
+        // draw a small circle to indicate the cursor position (pen size)
+        if let Some(mouse_pos) = ctx.input(|i| i.pointer.hover_pos()) {
+            painter.circle_filled(mouse_pos, (self.thickness * app.zoom) / 2.0, self.drawing_color);
+        }
+    }
 
     // slider for the value of the
     fn tool_ui(&mut self, ctx: &Context, app: &mut Shaper) {

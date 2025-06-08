@@ -15,20 +15,19 @@ pub struct Shape {
     /// All “fitted” Bézier segments (one CubicBez per segment)
     pub beziers: Vec<CubicBez>,
 
-    /// Minimum pixel distance before we sample a new raw point
-    pub sample_tol: f32,
-
     pub thickness: f32,
+
+    pub stroke_color: Color32,
 }
 
 impl Shape {
-    pub fn new(thickness: f32) -> Self {
+    pub fn new(thickness: f32, stroke_color: Color32) -> Self {
         Shape {
             current_stroke: Vec::new(),
             raw_strokes: Vec::new(),
             beziers: Vec::new(),
-            sample_tol: 2.0,
             thickness: thickness,
+            stroke_color: stroke_color,
         }
     }
 
@@ -187,7 +186,7 @@ impl Shape {
                 [p3, p2],
                 Stroke::new(app.handle_arm_thicknes * app.zoom, app.handle_arm_color),
             );
-            
+
             // simple one color filled circle for all points
             // painter.circle_filled(p0, handle_radius, p_color);
             // painter.circle_filled(p1, handle_radius, cp_color);
@@ -197,8 +196,8 @@ impl Shape {
             //alternatively:
             // the control points as circles
             // and the points themselves as squares
-            
-            // first draw a rect slightly bigger (1 pixel) 
+
+            // first draw a rect slightly bigger (1 pixel)
             // bigger than the actual rect
             let p0_rect = Rect {
                 min: Pos2 { x: p0.x - handle_border_radius, y: p0.y - handle_border_radius },
@@ -211,7 +210,7 @@ impl Shape {
                 max: Pos2 { x: p3.x + handle_border_radius, y: p3.y + handle_border_radius },
             };
             painter.rect_filled(p3_rect, 0.0, p_border_color);
-            
+
 
 
 
@@ -230,7 +229,7 @@ impl Shape {
 
             // control points:
             // same for the control points
-            // first draw the border 1 pixel 
+            // first draw the border 1 pixel
             // bigger and then the points
             painter.circle_filled(p1, handle_border_radius, p_border_color);
             painter.circle_filled(p2, handle_border_radius, p_border_color);
@@ -244,7 +243,7 @@ impl Shape {
         // we'll accumulate _all_ screen‐space points here:
         let mut all_points: Vec<Pos2> = Vec::new();
 
-        
+
 
         // 1) loop each fitted CubicBez segment:
         for (seg_idx, bzr) in self.beziers.iter().enumerate() {

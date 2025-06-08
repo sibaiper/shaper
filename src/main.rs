@@ -100,7 +100,7 @@ impl Default for Shaper {
 
         Shaper {
             shapes: Vec::new(),
-            curr_shape: Shape::new(10.0),
+            curr_shape: Shape::new(10.0, Color32::BLACK),
             bezier_tolerance: 10.0,
             show_handles: false,
             draw_original_stroke: false,
@@ -230,11 +230,12 @@ impl eframe::App for Shaper {
             for shape in &self.shapes {
                 shape.draw_beziers(&painter, self);
             }
+
             // draw in-progress stroke in gray:
             for window in self.curr_shape.current_stroke.windows(2) {
                 let a = self.world_to_screen(window[0]);
                 let b = self.world_to_screen(window[1]);
-                painter.line_segment([a, b], egui::Stroke::new(5.0, Color32::GRAY));
+                painter.line_segment([a, b], egui::Stroke::new(self.curr_shape.thickness * self.zoom, self.curr_shape.stroke_color));
             }
             // optionally draw raw strokes in green:
             if self.draw_original_stroke {
@@ -258,7 +259,7 @@ impl eframe::App for Shaper {
                         .drawing_tool
                         .take()
                         .expect("drawing_tool was None when it shouldn’t be");
-                    tool.paint(&painter, self);
+                    tool.paint(ctx ,&painter, self);
                     self.drawing_tool = Some(tool);
                 }
                 ToolKind::Panning => {
@@ -266,7 +267,7 @@ impl eframe::App for Shaper {
                         .panning_tool
                         .take()
                         .expect("panning_tool was None when it shouldn’t be");
-                    tool.paint(&painter, self);
+                    tool.paint(ctx ,&painter, self);
                     self.panning_tool = Some(tool);
                 }
 
@@ -275,7 +276,7 @@ impl eframe::App for Shaper {
                         .editing_tool
                         .take()
                         .expect("editing_tool was None when it shouldn`t be");
-                    tool.paint(&painter, self);
+                    tool.paint(ctx ,&painter, self);
                     self.editing_tool = Some(tool);
                 }
             }

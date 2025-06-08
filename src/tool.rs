@@ -18,7 +18,7 @@ pub trait Tool {
 
     /// called after input, to let the tool draw any custom UI or decorations.
     /// draw in-progress strokes, pan hints, etc.
-    fn paint(&mut self, painter: &Painter, app: &crate::Shaper);
+    fn paint(&mut self,  ctx: &Context, painter: &Painter, app: &crate::Shaper);
 
     
     // draw specific UI elements
