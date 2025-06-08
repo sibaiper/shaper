@@ -22,5 +22,5 @@ pub trait Tool {
 
     
     // draw specific UI elements
-    fn tool_ui(&mut self, ctx: &Context, app: &crate::Shaper);
+    fn tool_ui(&mut self, ctx: &Context, app: &mut crate::Shaper);
 }

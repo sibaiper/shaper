@@ -5,11 +5,13 @@ mod tools {
     pub mod editing_tool;
     pub mod panning_tool;
 }
+use core::f32;
+
 use crate::shape::Shape;
 use crate::tool::Tool;
 use eframe::egui::{self, Context, Visuals};
 use egui::emath::Vec2;
-use egui::{Color32, Sense};
+use egui::{Align, Color32, Layout, Sense};
 use tools::drawing_tool::DrawingTool;
 use tools::editing_tool::EditingTool;
 use tools::panning_tool::PanningTool;
@@ -23,6 +25,7 @@ pub enum ToolKind {
     //Selection
 }
 
+#[allow(dead_code)]
 /// main application state
 struct Shaper {
     // render the control points or not
@@ -48,6 +51,10 @@ struct Shaper {
     // transform values
     pub pan_offset: Vec2,
     pub zoom: f32,
+    // zoom and pan vals:
+    pub max_zoom: f32,
+    pub min_zoom: f32,
+    pub zoom_percent: f32,
 
     // which tool is currently active
     pub selected_tool: ToolKind,
@@ -83,14 +90,27 @@ struct Shaper {
 
 impl Default for Shaper {
     fn default() -> Self {
+        let min_zoom_val = 0.1f32;
+        let max_zoom_val = 16.0f32;
+        let default_zoom_val = 1.0f32;
+
+        // calc zoom_percent based on the default zoom
+        let zoom_percent_val =
+            (default_zoom_val - min_zoom_val) / (max_zoom_val - min_zoom_val) * 100.0;
+
         Shaper {
             shapes: Vec::new(),
-            curr_shape: Shape::new(),
+            curr_shape: Shape::new(10.0),
             bezier_tolerance: 10.0,
             show_handles: false,
             draw_original_stroke: false,
+
             pan_offset: Vec2::ZERO,
             zoom: 1.0,
+            max_zoom: max_zoom_val,
+            min_zoom: min_zoom_val,
+            zoom_percent: zoom_percent_val,
+
             selected_tool: ToolKind::Drawing,
             drawing_tool: Some(Box::new(DrawingTool::new())),
             panning_tool: Some(Box::new(PanningTool::new())),
@@ -140,6 +160,13 @@ impl Shaper {
             (p.x - self.pan_offset.x) / self.zoom,
             (p.y - self.pan_offset.y) / self.zoom,
         )
+    }
+
+    // func to update the zoom_level variable internatlly
+    // based on the also internally stored zoom variable.
+    pub fn calc_zoom_level(&mut self) {
+        // calc zoom_percent based on the default zoom
+        self.zoom_percent = (self.zoom - self.min_zoom) / (self.max_zoom - self.min_zoom) * 100.0;
     }
 }
 
@@ -267,43 +294,33 @@ impl Shaper {
     fn show_settings_window(&mut self, ctx: &Context) {
         egui::Window::new("Settings")
             .anchor(egui::Align2::RIGHT_TOP, egui::Vec2::new(-10.0, 10.0))
+            .collapsible(false)
+            .title_bar(false)
             .show(ctx, |ui| {
                 ui.checkbox(&mut self.show_handles, "Show handles");
                 ui.checkbox(&mut self.draw_original_stroke, "Draw original stroke");
-                let tol =
-                    egui::Slider::new(&mut self.bezier_tolerance, 1.0..=100.0).text("Tolerance");
-                if ui.add(tol).changed() {
-                    // if tolerance changed, refit all existing shapes:
-                    for shape in &mut self.shapes {
-                        shape.refit_all_strokes(self.bezier_tolerance);
-                    }
-                }
-
-                // slider for thickness of curves
-                let width = egui::Slider::new(&mut self.thickness, 1.0..=100.0).text("Thickness");
-                if ui.add(width).changed() {
-                    // if tolerance changed, refit all existing shapes:
-                    for shape in &mut self.shapes {
-                        shape.thickness = self.thickness;
-                    }
-                }
             });
     }
 
     // tools window
     fn show_tools_window(&mut self, ctx: &Context) {
         egui::Window::new("Tools")
-            .anchor(egui::Align2::LEFT_TOP, egui::Vec2::new(10.0, 10.0))
+            .title_bar(false)
+            .resizable(false)
+            .default_height(f32::NAN)
+            .anchor(egui::Align2::CENTER_BOTTOM, egui::Vec2::new(0.0, -10.0))
             .show(ctx, |ui| {
-                if ui.button("Draw").clicked() {
-                    self.selected_tool = ToolKind::Drawing;
-                }
-                if ui.button("Pan-Zoom").clicked() {
-                    self.selected_tool = ToolKind::Panning;
-                }
-                if ui.button("Edit").clicked() {
-                    self.selected_tool = ToolKind::Editing;
-                }
+                ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                    if ui.button("Draw").clicked() {
+                        self.selected_tool = ToolKind::Drawing;
+                    }
+                    if ui.button("Pan-Zoom").clicked() {
+                        self.selected_tool = ToolKind::Panning;
+                    }
+                    if ui.button("Edit").clicked() {
+                        self.selected_tool = ToolKind::Editing;
+                    }
+                });
             });
     }
 

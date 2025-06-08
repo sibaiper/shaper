@@ -1,22 +1,52 @@
-use eframe::egui::{self, Event, Context, Painter, Response};
-use crate::{Shape, Shaper};
 use crate::tool::Tool;
+use crate::{Shape, Shaper};
+use eframe::egui::{self, Align, Context, Event, Layout, Painter, Response, SliderOrientation};
+use egui::emath::Vec2;
 
-pub struct DrawingTool;
+pub struct DrawingTool {
+    bezier_tolerance: f64,
+    thickness: f32,
+}
 
 impl DrawingTool {
     pub fn new() -> Self {
-        DrawingTool
+        DrawingTool {
+            bezier_tolerance: 10.0,
+            thickness: 10.0,
+        }
     }
 }
 
 impl Tool for DrawingTool {
-    fn handle_input(
-        &mut self,
-        ctx: &Context,
-        response: &Response,
-        app: &mut Shaper,
-    ) {
+    fn handle_input(&mut self, ctx: &Context, response: &Response, app: &mut Shaper) {
+        // handle zooming  in and out first
+        if let Some(pointer_pos) = response.hover_pos() {
+            let scroll_delta = ctx.input(|i| i.smooth_scroll_delta.y);
+            if scroll_delta != 0.0 {
+                // convert world position before zoom
+                let old_world_pos = app.screen_to_world(pointer_pos);
+
+                // apply zoom
+                let zoom_delta = (scroll_delta * 0.009).exp();
+                app.zoom *= zoom_delta;
+                app.zoom = app.zoom.clamp(app.min_zoom, app.max_zoom);
+
+                // convert world position after zoom
+                let new_world_pos = app.screen_to_world(pointer_pos);
+
+                // adjust pan offset to keep pointer position stable
+                // convert Pos2 difference directly to Vec2
+                let world_delta = Vec2::new(
+                    new_world_pos.x - old_world_pos.x,
+                    new_world_pos.y - old_world_pos.y,
+                );
+                app.pan_offset += world_delta * app.zoom;
+                
+                // percentage calculation:
+                app.calc_zoom_level();
+            }
+        }
+
         // begin raw stroke
         if response.drag_started() {
             app.curr_shape.current_stroke.clear();
@@ -49,17 +79,21 @@ impl Tool for DrawingTool {
 
                 // fit to Bézier chain
                 let stroke = app.curr_shape.current_stroke.clone();
-                app.curr_shape.fit_curve_and_store(&stroke, app.bezier_tolerance);
+                app.curr_shape
+                    .fit_curve_and_store(&stroke, self.bezier_tolerance);
 
                 // push shape and reset
                 app.shapes.push(app.curr_shape.clone());
-                app.curr_shape = Shape::new();
+                app.curr_shape = Shape::new(self.thickness);
             }
         }
 
         // event: allow “delete last stroke” via Backspace/Delete:
         for event in &ctx.input(|i: &egui::InputState| i.events.clone()) {
-            if let Event::Key { key, pressed: true, .. } = event {
+            if let Event::Key {
+                key, pressed: true, ..
+            } = event
+            {
                 match key {
                     egui::Key::Delete | egui::Key::Backspace => {
                         if let Some(_) = app.shapes.pop() {
@@ -74,9 +108,26 @@ impl Tool for DrawingTool {
 
     fn paint(&mut self, _painter: &Painter, _app: &Shaper) {}
 
-    
-    fn tool_ui(&mut self, ctx: &Context, app: &Shaper) {
-        // Default: do nothing
-    }
+    // slider for the value of the
+    fn tool_ui(&mut self, ctx: &Context, app: &mut Shaper) {
+        egui::TopBottomPanel::top("drawing settings")
+            .resizable(false)
+            .show(ctx, |ui| {
+                ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                    // slider for the tolerance of the drawing tool
+                    let tol = egui::Slider::new(&mut self.bezier_tolerance, 1.0..=100.0)
+                        .text("Tolerance")
+                        .orientation(SliderOrientation::Horizontal);
+                    ui.add(tol);
 
+                    // slider for thickness of curves
+                    let width = egui::Slider::new(&mut self.thickness, 1.0..=100.0)
+                        .text("Thickness")
+                        .orientation(SliderOrientation::Horizontal);
+                    if ui.add(width).changed() {
+                        app.curr_shape.thickness = self.thickness;
+                    }
+                });
+            });
+    }
 }

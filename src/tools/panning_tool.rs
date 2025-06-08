@@ -1,6 +1,6 @@
-use crate::tool::Tool;
 use crate::Shaper;
-use eframe::egui::{Context, Painter, Pos2, Response, Vec2};
+use crate::tool::Tool;
+use eframe::egui::{self, Align, Context, Layout, Painter, Pos2, Response, Vec2};
 
 pub struct PanningTool {
     /// remember the pointer position at the start of drag
@@ -29,7 +29,7 @@ impl Tool for PanningTool {
                 // apply zoom
                 let zoom_delta = (scroll_delta * 0.009).exp();
                 app.zoom *= zoom_delta;
-                app.zoom = app.zoom.clamp(0.1, 16.0);
+                app.zoom = app.zoom.clamp(app.min_zoom, app.max_zoom);
 
                 // convert world position after zoom
                 let new_world_pos = app.screen_to_world(pointer_pos);
@@ -41,6 +41,9 @@ impl Tool for PanningTool {
                     new_world_pos.y - old_world_pos.y,
                 );
                 app.pan_offset += world_delta * app.zoom;
+
+                // percentage calculation:
+                app.calc_zoom_level();
             }
         }
 
@@ -79,7 +82,32 @@ impl Tool for PanningTool {
         // );
     }
 
-    fn tool_ui(&mut self, ctx: &Context, app: &crate::Shaper) {
-        // do nothing for
+    fn tool_ui(&mut self, ctx: &Context, app: &mut Shaper) {
+        egui::TopBottomPanel::top("panning settings")
+            .resizable(false)
+            .show(ctx, |ui| {
+                ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                    // reset transform (pan and zoom) button
+                    let reset_transform_btn = egui::Button::new("Reset Transformation");
+                    if ui.add(reset_transform_btn).clicked() {
+                        app.zoom = 1.0;
+                        app.pan_offset.x = 0.0;
+                        app.pan_offset.y = 0.0;
+                    }
+
+                    // zoom state:
+                    ui.label("Current Panning Settings:");
+                    
+                    ui.label(format!("Zoom: {:.2}%", app.zoom_percent));
+                    ui.label(format!(
+                        "Pan X: {:.2}, Pan Y: {:.2}",
+                        app.pan_offset.x, app.pan_offset.y // think one needs to account for the zoom level too but will come back to it later to check
+                    ));
+
+                    // for an editable text field:
+                    // let mut some_editable_text = "Edit me!".to_owned();
+                    // ui.text_edit_singleline(&mut some_editable_text);
+                });
+            });
     }
 }

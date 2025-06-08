@@ -18,17 +18,17 @@ pub struct Shape {
     /// Minimum pixel distance before we sample a new raw point
     pub sample_tol: f32,
 
-    pub thickness: f64,
+    pub thickness: f32,
 }
 
 impl Shape {
-    pub fn new() -> Self {
+    pub fn new(thickness: f32) -> Self {
         Shape {
             current_stroke: Vec::new(),
             raw_strokes: Vec::new(),
             beziers: Vec::new(),
             sample_tol: 2.0,
-            thickness: 10.0,
+            thickness: thickness,
         }
     }
 
@@ -88,6 +88,7 @@ impl Shape {
         }
     }
 
+    #[allow(dead_code)]
     /// method to be called whenever `self.bezier_tolerance` changes.
     /// it throws away all old Béziers and re‐creates them from every raw stroke.
     pub fn refit_all_strokes(&mut self, bzr_tol: f64) {
@@ -144,7 +145,7 @@ impl Shape {
         }
 
         // now `all_points` is one continuous polyline in screen space. Stroke it once:
-        let stroke_width = (self.thickness * app.zoom as f64) as f32;
+        let stroke_width = self.thickness * app.zoom;
         let stroke = Stroke::new(stroke_width, Color32::BLACK);
         painter.line(all_points, stroke);
     }
@@ -243,6 +244,8 @@ impl Shape {
         // we'll accumulate _all_ screen‐space points here:
         let mut all_points: Vec<Pos2> = Vec::new();
 
+        
+
         // 1) loop each fitted CubicBez segment:
         for (seg_idx, bzr) in self.beziers.iter().enumerate() {
             // 1a) convert the four Kurbo control points into screen‐space Pos2:
@@ -285,7 +288,8 @@ impl Shape {
         }
 
         // now `all_points` is one continuous polyline in screen space. Stroke it once:
-        let stroke_width = app.overlay_beziers_thickness * app.zoom;
+        let mut stroke_width = (self.thickness / 3.0) * app.zoom;
+        stroke_width = stroke_width.min(app.overlay_beziers_thickness);
         let stroke = Stroke::new(stroke_width, Color32::WHITE);
         painter.line(all_points, stroke);
     }

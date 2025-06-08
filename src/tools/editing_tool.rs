@@ -1,11 +1,18 @@
-use crate::tool::Tool;
 use crate::Shaper;
-use eframe::egui::{Context, Painter, Pos2, Response, Vec2};
+use crate::tool::Tool;
+use eframe::egui::{self, Align, Context, Layout, Painter, Pos2, Response, Vec2};
 use kurbo::{Nearest, ParamCurveNearest, Point};
 
 /// A small enum to remember what the user clicked on (and is now dragging).
 /// Remember what we’re dragging: either one control handle (and its neighbors),
 /// or the entire segment.
+
+#[derive(PartialEq)]
+enum MoveMode {
+    MovePoint,
+    MoveControlPoints,
+}
+
 enum ActiveDrag {
     ControlPoint {
         // this variable is to track the index of the
@@ -47,6 +54,8 @@ pub struct EditingTool {
 
     /// When dragging, remember exactly what control/segment is “active”
     active_drag: ActiveDrag,
+
+    move_mode: MoveMode,
 }
 
 impl EditingTool {
@@ -57,6 +66,7 @@ impl EditingTool {
             active_drag: ActiveDrag::None,
             // selected_shape_index: -1,
             // selected_bezier_index: -1,
+            move_mode: MoveMode::MovePoint,
         }
     }
 }
@@ -72,7 +82,7 @@ impl Tool for EditingTool {
                 // apply zoom
                 let zoom_delta = (scroll_delta * 0.009).exp();
                 app.zoom *= zoom_delta;
-                app.zoom = app.zoom.clamp(0.1, 16.0);
+                app.zoom = app.zoom.clamp(app.min_zoom, app.max_zoom);
 
                 // convert world position after zoom
                 let new_world_pos = app.screen_to_world(pointer_pos);
@@ -84,6 +94,9 @@ impl Tool for EditingTool {
                     new_world_pos.y - old_world_pos.y,
                 );
                 app.pan_offset += world_delta * app.zoom;
+
+                // percentage calculation:
+                app.calc_zoom_level();
             }
         }
 
@@ -254,7 +267,16 @@ impl Tool for EditingTool {
 
     fn paint(&mut self, _painter: &Painter, _app: &Shaper) {}
 
-    fn tool_ui(&mut self, ctx: &Context, app: &crate::Shaper) {
-        // do nothing for
+    fn tool_ui(&mut self, ctx: &Context, _app: &mut Shaper) {
+        egui::TopBottomPanel::top("edit settings")
+            .resizable(false)
+            .show(ctx, |ui| {
+                ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                    // let move_segment_checkbox = egui::Checkbox::new(move_segment, "Move Segment").indeterminate(false);
+
+                    ui.radio_value(&mut self.move_mode, MoveMode::MovePoint, "Move Point");
+                    ui.radio_value(&mut self.move_mode, MoveMode::MoveControlPoints, "Move Control Points");
+                });
+            });
     }
 }
