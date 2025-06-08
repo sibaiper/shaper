@@ -11,7 +11,7 @@ use crate::shape::Shape;
 use crate::tool::Tool;
 use eframe::egui::{self, Context, Visuals};
 use egui::emath::Vec2;
-use egui::{Align, Color32, Layout, Sense};
+use egui::{Align, Color32, Layout, Sense, Pos2};
 use tools::drawing_tool::DrawingTool;
 use tools::editing_tool::EditingTool;
 use tools::panning_tool::PanningTool;
@@ -231,15 +231,28 @@ impl eframe::App for Shaper {
                 shape.draw_beziers(&painter, self);
             }
 
-            // draw in-progress stroke in gray:
-            // TODO
-            // update this to use this method:
+            // draw in-progress stroke
+            // using this method:
             // https://github.com/emilk/egui/blob/main/crates/egui_demo_lib/src/demo/painting.rs
-            for window in self.curr_shape.current_stroke.windows(2) {
-                let a = self.world_to_screen(window[0]);
-                let b = self.world_to_screen(window[1]);
-                painter.line_segment([a, b], egui::Stroke::new(self.curr_shape.thickness * self.zoom, self.curr_shape.stroke_color));
+            if self.curr_shape.current_stroke.len() >= 2 {
+                // map all of your raw points into screen-space in one go:
+                let pts: Vec<Pos2> = self
+                    .curr_shape
+                    .current_stroke
+                    .iter()
+                    .map(|p| self.world_to_screen(*p))
+                    .collect();
+
+                // then push one Shape::line with all of them:
+                painter.add(egui::Shape::line(
+                    pts,
+                    egui::Stroke::new(
+                        self.curr_shape.thickness * self.zoom,
+                        self.curr_shape.stroke_color,
+                    ),
+                ));
             }
+
             // optionally draw raw strokes in green:
             if self.draw_original_stroke {
                 for shape in &self.shapes {
@@ -262,7 +275,7 @@ impl eframe::App for Shaper {
                         .drawing_tool
                         .take()
                         .expect("drawing_tool was None when it shouldn’t be");
-                    tool.paint(ctx ,&painter, self);
+                    tool.paint(ctx, &painter, self);
                     self.drawing_tool = Some(tool);
                 }
                 ToolKind::Panning => {
@@ -270,7 +283,7 @@ impl eframe::App for Shaper {
                         .panning_tool
                         .take()
                         .expect("panning_tool was None when it shouldn’t be");
-                    tool.paint(ctx ,&painter, self);
+                    tool.paint(ctx, &painter, self);
                     self.panning_tool = Some(tool);
                 }
 
@@ -279,7 +292,7 @@ impl eframe::App for Shaper {
                         .editing_tool
                         .take()
                         .expect("editing_tool was None when it shouldn`t be");
-                    tool.paint(ctx ,&painter, self);
+                    tool.paint(ctx, &painter, self);
                     self.editing_tool = Some(tool);
                 }
             }
