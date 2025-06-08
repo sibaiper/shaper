@@ -232,6 +232,9 @@ impl eframe::App for Shaper {
             }
 
             // draw in-progress stroke in gray:
+            // TODO
+            // update this to use this method:
+            // https://github.com/emilk/egui/blob/main/crates/egui_demo_lib/src/demo/painting.rs
             for window in self.curr_shape.current_stroke.windows(2) {
                 let a = self.world_to_screen(window[0]);
                 let b = self.world_to_screen(window[1]);

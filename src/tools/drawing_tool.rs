@@ -1,6 +1,9 @@
 use crate::tool::Tool;
 use crate::{Shape, Shaper};
-use eframe::egui::{self, Align, Color32, Context, Event, Layout, Painter, Response, SliderOrientation};
+use eframe::egui::color_picker::Alpha;
+use eframe::egui::{
+    self, Align, Color32, Context, Event, Layout, Painter, Response, SliderOrientation
+};
 use egui::emath::Vec2;
 
 pub struct DrawingTool {
@@ -9,7 +12,6 @@ pub struct DrawingTool {
 
     /// Minimum pixel distance before we sample a new raw point
     sample_tol: f32,
-
 
     drawing_color: Color32,
 }
@@ -117,7 +119,11 @@ impl Tool for DrawingTool {
     fn paint(&mut self, ctx: &Context, painter: &Painter, app: &Shaper) {
         // draw a small circle to indicate the cursor position (pen size)
         if let Some(mouse_pos) = ctx.input(|i| i.pointer.hover_pos()) {
-            painter.circle_filled(mouse_pos, (self.thickness * app.zoom) / 2.0, self.drawing_color);
+            painter.circle_filled(
+                mouse_pos,
+                (self.thickness * app.zoom) / 2.0,
+                self.drawing_color,
+            );
         }
     }
 
@@ -140,6 +146,19 @@ impl Tool for DrawingTool {
                     if ui.add(width).changed() {
                         app.curr_shape.thickness = self.thickness;
                     }
+
+                    ui.horizontal(|ui| {
+                        // Using the color edit button (most common)
+                        ui.label("Color from button:");
+                        let color_response = egui::widgets::color_picker::color_edit_button_srgba(
+                            ui,
+                            &mut self.drawing_color,
+                            Alpha::Opaque
+                        );
+                        if color_response.changed() {
+                            app.curr_shape.stroke_color = self.drawing_color;
+                        }
+                    });
                 });
             });
     }

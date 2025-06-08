@@ -145,7 +145,7 @@ impl Shape {
 
         // now `all_points` is one continuous polyline in screen space. Stroke it once:
         let stroke_width = self.thickness * app.zoom;
-        let stroke = Stroke::new(stroke_width, Color32::BLACK);
+        let stroke = Stroke::new(stroke_width, self.stroke_color);
         painter.line(all_points, stroke);
     }
 
