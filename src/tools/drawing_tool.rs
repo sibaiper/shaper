@@ -147,9 +147,9 @@ impl Tool for DrawingTool {
                         app.curr_shape.thickness = self.thickness;
                     }
 
+                    // color picker for the stroke using 
+                    // the color edit button (most common)
                     ui.horizontal(|ui| {
-                        // Using the color edit button (most common)
-                        ui.label("Color from button:");
                         let color_response = egui::widgets::color_picker::color_edit_button_srgba(
                             ui,
                             &mut self.drawing_color,
@@ -158,6 +158,7 @@ impl Tool for DrawingTool {
                         if color_response.changed() {
                             app.curr_shape.stroke_color = self.drawing_color;
                         }
+                        ui.label("Stroke Color:");
                     });
                 });
             });
