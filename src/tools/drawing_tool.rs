@@ -14,6 +14,8 @@ pub struct DrawingTool {
     sample_tol: f32,
 
     drawing_color: Color32,
+    
+    is_drawing: bool,
 }
 
 impl DrawingTool {
@@ -23,6 +25,7 @@ impl DrawingTool {
             thickness: 10.0,
             sample_tol: 2.0,
             drawing_color: Color32::BLACK,
+            is_drawing: false,
         }
     }
 }
@@ -76,6 +79,7 @@ impl Tool for DrawingTool {
                 };
                 if should_add {
                     app.curr_shape.current_stroke.push(world_pos);
+                    self.is_drawing = true;
                 }
             }
         }
@@ -96,6 +100,7 @@ impl Tool for DrawingTool {
                 app.shapes.push(app.curr_shape.clone());
                 app.curr_shape = Shape::new(self.thickness, self.drawing_color);
             }
+            self.is_drawing = false;
         }
 
         // event: allow “delete last stroke” via Backspace/Delete:
@@ -120,19 +125,23 @@ impl Tool for DrawingTool {
         // draw a small circle to indicate the cursor position (pen size)
         if let Some(mouse_pos) = ctx.input(|i| i.pointer.hover_pos()) {
             
-            // circle indicator
-            // painter.circle_filled(
-            //     mouse_pos,
-            //     (self.thickness * app.zoom) / 2.0,
-            //     self.drawing_color,
-            // );
-
-            // rect indicator
-            let brush_rect = Rect {
-                min: Pos2 { x: mouse_pos.x - (self.thickness / 2.0) * app.zoom, y: mouse_pos.y - (self.thickness / 2.0) * app.zoom },
-                max: Pos2 { x: mouse_pos.x + (self.thickness / 2.0) * app.zoom, y: mouse_pos.y + (self.thickness / 2.0) * app.zoom },
-            };
-            painter.rect_filled(brush_rect, 0.0, self.drawing_color);            
+            // this check statement might only be "more useful" 
+            // for the rect indicator.
+            if !self.is_drawing {
+                // circle indicator
+                painter.circle_filled(
+                    mouse_pos,
+                    (self.thickness * app.zoom) / 2.0,
+                    self.drawing_color,
+                );
+    
+                // rect indicator
+                // let brush_rect = Rect {
+                //     min: Pos2 { x: mouse_pos.x - (self.thickness / 2.0) * app.zoom, y: mouse_pos.y - (self.thickness / 2.0) * app.zoom },
+                //     max: Pos2 { x: mouse_pos.x + (self.thickness / 2.0) * app.zoom, y: mouse_pos.y + (self.thickness / 2.0) * app.zoom },
+                // };
+                // painter.rect_filled(brush_rect, 0.0, self.drawing_color);            
+            }
             
         }
     }
