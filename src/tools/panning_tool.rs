@@ -6,6 +6,8 @@ pub struct PanningTool {
     /// remember the pointer position at the start of drag
     drag_start: Option<Pos2>,
     orig_pan: Vec2,
+
+    is_panning: bool,
 }
 
 impl PanningTool {
@@ -13,6 +15,7 @@ impl PanningTool {
         PanningTool {
             drag_start: None,
             orig_pan: Vec2::ZERO,
+            is_panning: false,
         }
     }
 }
@@ -23,33 +26,37 @@ impl Tool for PanningTool {
         if let Some(pointer_pos) = response.hover_pos() {
             let scroll_delta = ctx.input(|i| i.smooth_scroll_delta.y);
             if scroll_delta != 0.0 {
-                // convert world position before zoom
-                let old_world_pos = app.screen_to_world(pointer_pos);
-
-                // apply zoom
-                let zoom_delta = (scroll_delta * 0.009).exp();
-                app.zoom *= zoom_delta;
-                app.zoom = app.zoom.clamp(app.min_zoom, app.max_zoom);
-
-                // convert world position after zoom
-                let new_world_pos = app.screen_to_world(pointer_pos);
-
-                // adjust pan offset to keep pointer position stable
-                // convert Pos2 difference directly to Vec2
-                let world_delta = Vec2::new(
-                    new_world_pos.x - old_world_pos.x,
-                    new_world_pos.y - old_world_pos.y,
-                );
-                app.pan_offset += world_delta * app.zoom;
-
-                // percentage calculation:
-                app.calc_zoom_level();
+                
+                if !self.is_panning {
+                    // convert world position before zoom
+                    let old_world_pos = app.screen_to_world(pointer_pos);
+    
+                    // apply zoom
+                    let zoom_delta = (scroll_delta * 0.009).exp();
+                    app.zoom *= zoom_delta;
+                    app.zoom = app.zoom.clamp(app.min_zoom, app.max_zoom);
+    
+                    // convert world position after zoom
+                    let new_world_pos = app.screen_to_world(pointer_pos);
+    
+                    // adjust pan offset to keep pointer position stable
+                    // convert Pos2 difference directly to Vec2
+                    let world_delta = Vec2::new(
+                        new_world_pos.x - old_world_pos.x,
+                        new_world_pos.y - old_world_pos.y,
+                    );
+                    app.pan_offset += world_delta * app.zoom;
+    
+                    // percentage calculation:
+                    app.calc_zoom_level();
+                }
             }
         }
 
         // when the user starts dragging, record the initial pointer and pan
         if response.drag_started() {
             if let Some(pos) = response.interact_pointer_pos() {
+                self.is_panning = true;
                 self.drag_start = Some(pos);
                 self.orig_pan = app.pan_offset;
             }
@@ -67,6 +74,7 @@ impl Tool for PanningTool {
         // on drag end, clear the stored start position
         if response.drag_stopped() {
             self.drag_start = None;
+            self.is_panning = false;
         }
     }
 
