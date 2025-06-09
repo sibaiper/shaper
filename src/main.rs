@@ -120,8 +120,8 @@ impl Default for Shaper {
             selected_p: -1, //
 
             // sizes
-            handle_radius: 4.0,
-            handle_arm_thicknes: 1.5,
+            handle_radius: 2.0,
+            handle_arm_thicknes: 1.0,
             overlay_beziers_thickness: 1.0,
             // colors
             p_color: Color32::WHITE,
