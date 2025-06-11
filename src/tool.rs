@@ -1,6 +1,5 @@
 use eframe::egui::{Context, Response, Painter};
 
-
 /// Each tool must be able to:
 /// - handle input events
 /// - draw tool specific UI elements
@@ -23,4 +22,14 @@ pub trait Tool {
     
     // draw specific UI elements
     fn tool_ui(&mut self, ctx: &Context, app: &mut crate::Shaper);
+}
+
+
+pub mod tools {
+    pub use crate::tools::selecting_tool::SelectionTool;
+    pub use crate::tools::panning_tool::PanningTool;
+    pub use crate::tools::drawing_tool::DrawingTool;
+    pub use crate::tools::editing_tool::EditingTool;
+    pub use crate::tools::curvature_tool::CurvatureTool;
+    pub use crate::tools::direct_selecting_tool::DirectSelectionTool;
 }

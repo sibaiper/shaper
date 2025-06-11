@@ -1,10 +1,10 @@
 use eframe::egui::{
     epaint::{CubicBezierShape, PathShape}, Color32, Painter, Pos2, Stroke, Rect
 };
-use kurbo::{CubicBez, Point as KPoint, Vec2};
+use kurbo::{CubicBez, ParamCurveExtrema, Point as KPoint, Vec2};
 use simplify_rs::{Point as SrPoint, simplify};
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Shape {
     /// raw points collected during the current drag
     pub current_stroke: Vec<Pos2>,
@@ -239,6 +239,7 @@ impl Shape {
         }
     }
 
+    
     pub fn draw_overlay_beziers(&self, painter: &Painter, app: &crate::Shaper) {
         // we'll accumulate _all_ screen‐space points here:
         let mut all_points: Vec<Pos2> = Vec::new();
@@ -291,6 +292,19 @@ impl Shape {
         stroke_width = stroke_width.min(app.overlay_beziers_thickness);
         let stroke = Stroke::new(stroke_width, Color32::WHITE);
         painter.line(all_points, stroke);
+    }
+
+    /// returns the bounding box of the shape, if it has any beziers.
+    pub fn bounding_box(&self) -> Option<kurbo::Rect> {
+        let mut bbox: Option<kurbo::Rect> = None;
+        for bez in &self.beziers {
+            let bez_bbox = bez.bounding_box();
+            bbox = match bbox {
+                Some(accum) => Some(accum.union(bez_bbox)),
+                None => Some(bez_bbox),
+            };
+        }
+        bbox
     }
 }
 

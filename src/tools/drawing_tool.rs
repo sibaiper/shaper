@@ -1,8 +1,10 @@
+use std::path::MAIN_SEPARATOR;
+
 use crate::tool::Tool;
 use crate::{Shape, Shaper};
 use eframe::egui::color_picker::Alpha;
 use eframe::egui::{
-    self, Align, Color32, Context, Event, Layout, Painter, Response, SliderOrientation, Rect, Pos2
+    self, Align, Color32, Context, Event, Layout, Painter, Pos2, Rect, Response, SliderOrientation,
 };
 use egui::emath::Vec2;
 
@@ -14,7 +16,7 @@ pub struct DrawingTool {
     sample_tol: f32,
 
     drawing_color: Color32,
-    
+
     is_drawing: bool,
 }
 
@@ -111,8 +113,11 @@ impl Tool for DrawingTool {
             {
                 match key {
                     egui::Key::Delete | egui::Key::Backspace => {
-                        if let Some(_) = app.shapes.pop() {
-                            //nothing to do actually
+                        // remove the shape's index from selected_shapes if it's selected
+                        if let Some(last_idx) = app.shapes.len().checked_sub(1) {
+                            app.selected_shapes.remove(&last_idx);
+                            // pop the shape
+                            app.shapes.pop();
                         }
                     }
                     _ => {}
@@ -124,8 +129,7 @@ impl Tool for DrawingTool {
     fn paint(&mut self, ctx: &Context, painter: &Painter, app: &Shaper) {
         // draw a small circle to indicate the cursor position (pen size)
         if let Some(mouse_pos) = ctx.input(|i| i.pointer.hover_pos()) {
-            
-            // this check statement might only be "more useful" 
+            // this check statement might only be "more useful"
             // for the rect indicator.
             if !self.is_drawing {
                 // circle indicator
@@ -134,19 +138,17 @@ impl Tool for DrawingTool {
                     (self.thickness * app.zoom) / 2.0,
                     self.drawing_color,
                 );
-    
+
                 // rect indicator
                 // let brush_rect = Rect {
                 //     min: Pos2 { x: mouse_pos.x - (self.thickness / 2.0) * app.zoom, y: mouse_pos.y - (self.thickness / 2.0) * app.zoom },
                 //     max: Pos2 { x: mouse_pos.x + (self.thickness / 2.0) * app.zoom, y: mouse_pos.y + (self.thickness / 2.0) * app.zoom },
                 // };
-                // painter.rect_filled(brush_rect, 0.0, self.drawing_color);            
+                // painter.rect_filled(brush_rect, 0.0, self.drawing_color);
             }
-            
         }
     }
 
-    // slider for the value of the
     fn tool_ui(&mut self, ctx: &Context, app: &mut Shaper) {
         egui::TopBottomPanel::top("drawing settings")
             .resizable(false)
@@ -166,13 +168,13 @@ impl Tool for DrawingTool {
                         app.curr_shape.thickness = self.thickness;
                     }
 
-                    // color picker for the stroke using 
+                    // color picker for the stroke using
                     // the color edit button (most common)
                     ui.horizontal(|ui| {
                         let color_response = egui::widgets::color_picker::color_edit_button_srgba(
                             ui,
                             &mut self.drawing_color,
-                            Alpha::Opaque
+                            Alpha::Opaque,
                         );
                         if color_response.changed() {
                             app.curr_shape.stroke_color = self.drawing_color;
